@@ -1,0 +1,6 @@
+{
+  "name": "Chain Reaction Game",
+  "description": "A turn-based strategy game where players place orbs to trigger chain reactions and capture cells. The last player with orbs on the board wins.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

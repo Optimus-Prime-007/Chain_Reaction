@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chain Reaction Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        overscroll-behavior: none; /* Prevents pull-to-refresh on mobile affecting gameplay */
+      }
+      /* Custom scrollbar for better aesthetics if needed, but Tailwind generally handles this well */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background-color: #4a5568; /* gray-700 */
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background-color: #2d3748; /* gray-800 */
+      }
+      .orb-display {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin: 1px;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@^19.1.0",
+          "react/": "https://esm.sh/react@^19.1.0/",
+          "react-dom/": "https://esm.sh/react-dom@^19.1.0/"
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-slate-900 text-slate-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
+<link rel="stylesheet" href="index.css" />
+<script src="index.tsx" type="module"></script>
