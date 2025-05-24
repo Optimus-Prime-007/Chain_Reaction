@@ -5,14 +5,16 @@ SET VENV_NAME=cr
 SET PYTHON_MAJOR_REQUIRED=3
 SET PYTHON_MINOR_REQUIRED=12
 
+REM --- Use the 'py' launcher to ensure the correct Python version is used ---
+SET PYTHON_COMMAND=py -%PYTHON_MAJOR_REQUIRED%.%PYTHON_MINOR_REQUIRED%
+
 ECHO --- Checking Python Version (Required: %PYTHON_MAJOR_REQUIRED%.%PYTHON_MINOR_REQUIRED%+) ---
 
 REM Try to run a python command that exits with errorlevel 0 if version is OK, 1 otherwise.
-python -c "import sys; sys.exit(0) if sys.version_info >= (%PYTHON_MAJOR_REQUIRED%, %PYTHON_MINOR_REQUIRED%) else sys.exit(1)"
+%PYTHON_COMMAND% -c "import sys; sys.exit(0) if sys.version_info >= (%PYTHON_MAJOR_REQUIRED%, %PYTHON_MINOR_REQUIRED%) else sys.exit(1)"
 IF ERRORLEVEL 1 (
-    ECHO Error: Python %PYTHON_MAJOR_REQUIRED%.%PYTHON_MINOR_REQUIRED%+ is required.
-    ECHO Please install Python %PYTHON_MAJOR_REQUIRED%.%PYTHON_MINOR_REQUIRED% or newer and ensure it's in your PATH.
-    ECHO You might need to use the 'py' launcher e.g., 'py -%PYTHON_MAJOR_REQUIRED%.%PYTHON_MINOR_REQUIRED% -m venv %VENV_NAME%' if 'python' is not the correct version.
+    ECHO Error: Python %PYTHON_MAJOR_REQUIRED%.%PYTHON_MINOR_REQUIRED%+ is required and could not be accessed via '%PYTHON_COMMAND%'.
+    ECHO Please ensure Python %PYTHON_MAJOR_REQUIRED%.%PYTHON_MINOR_REQUIRED% or newer is installed and the 'py' launcher is working correctly.
     GOTO :EOF
 ) ELSE (
     ECHO Python version check passed.
@@ -21,9 +23,9 @@ IF ERRORLEVEL 1 (
 ECHO.
 ECHO --- Setting up Virtual Environment ('%VENV_NAME%') ---
 IF NOT EXIST "%VENV_NAME%" (
-    ECHO Creating virtual environment: %VENV_NAME%...
-    REM Assuming 'python' command found above is the correct one.
-    python -m venv "%VENV_NAME%"
+    ECHO Creating virtual environment: %VENV_NAME% using %PYTHON_COMMAND% ...
+    REM Explicitly use the 'py' launcher with the specified version
+    %PYTHON_COMMAND% -m venv "%VENV_NAME%"
     IF ERRORLEVEL 1 (
         ECHO Error: Failed to create virtual environment.
         GOTO :EOF
@@ -36,10 +38,10 @@ IF NOT EXIST "%VENV_NAME%" (
 ECHO.
 ECHO --- Activating Virtual Environment and Installing Dependencies ---
 REM Activate virtual environment
-CALL "%VENV_NAME%\Scriptsctivate.bat"
+CALL "%VENV_NAME%\Scripts\activate.bat"
 IF ERRORLEVEL 1 (
     ECHO Error: Failed to activate virtual environment.
-    ECHO Try activating manually: CALL %VENV_NAME%\Scriptsctivate.bat
+    ECHO Try activating manually: CALL %VENV_NAME%\Scripts\activate.bat
     GOTO :EOF
 )
 ECHO Virtual environment activated.
@@ -62,8 +64,7 @@ ECHO.
 ECHO --- Setup Complete ---
 ECHO Python virtual environment '%VENV_NAME%' is set up and activated.
 ECHO To deactivate, run: %VENV_NAME%\Scripts\deactivate.bat
-ECHO To re-activate in a new terminal, run: CALL %VENV_NAME%\Scriptsctivate.bat
+ECHO To re-activate in a new terminal, run: CALL %VENV_NAME%\Scripts\activate.bat
 
 :EOF
 ENDLOCAL
-```
