@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any # Added Any for config type hint flexibil
 # Ensure tensorboard is installed: pip install tensorboard
 # Handle potential import error for SummaryWriter if tensorboard is not installed.
 try:
-    from torch.utils.tensorboard import SummaryWriter
+    from torch.utils.tensorboard.writer import SummaryWriter
 except ImportError:
     SummaryWriter = None # Allow the program to run, but TensorBoard logging will be disabled
 
@@ -153,4 +153,4 @@ def get_experiment_logger() -> ExperimentLogger:
 #         print("Singleton access successful.")
 #     retrieved_logger.log_info("Logged using retrieved logger instance.")
 #     retrieved_logger.close() # Note: closing handlers twice might be an issue if not careful.
-                              # The close method should ideally make handlers unusable or clear them fully.
+# The close method should ideally make handlers unusable or clear them fully.
