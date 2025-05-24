@@ -1,7 +1,7 @@
+from __future__ import annotations # For type hint Node in parent: Optional[Node]
 import math
 import numpy as np
 import random
-from __future__ import annotations # For type hint Node in parent: Optional[Node]
 from typing import Optional, Dict, List, Tuple, Any # Added Tuple
 from ai.models import GameState, Position, PlayerId, GridSizeConfig # Added GridSizeConfig
 from ai.alphazero.neural_net import YourNeuralNet # Added YourNeuralNet
@@ -216,7 +216,7 @@ def get_best_move(root_node: Node, temperature: float = 1.0) -> Position:
             raise ValueError("Visit counts cannot be negative.")
 
         if len(moves) == 0: # Should be caught by the first check, but as a safeguard
-             raise ValueError("No moves available in root node's children.")
+            raise ValueError("No moves available in root node's children.")
 
         # If all visit_counts are 0, distribute probability uniformly.
         if np.all(visit_counts == 0):
