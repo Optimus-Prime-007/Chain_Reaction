@@ -4,7 +4,7 @@ import numpy as np
 import random
 from typing import Optional, Dict, List, Tuple, Any # Added Tuple
 from ai.models import GameState, Position, PlayerId, GridSizeConfig # Added GridSizeConfig
-from ai.alphazero.neural_net import YourNeuralNet # Added YourNeuralNet
+from ai.alphazero.neural_net import AlphaZeroNet # Added YourNeuralNet
 
 class Node:
     def __init__(self, state: GameState, player_id_at_node: PlayerId, parent: Optional[Node] = None, prior_probability: float = 0.0):
@@ -188,7 +188,7 @@ def run_simulations(
             # Value is from the perspective of 'effective_value_perspective_player_id'
             # If the player at node_in_path is different from the one whose perspective 'value' holds, negate the value.
             if node_in_path.player_id_at_node != effective_value_perspective_player_id:
-                node_in_path.total_action_value -= value 
+                node_in_path.total_action_value -= value
             else:
                 node_in_path.total_action_value += value
                 
