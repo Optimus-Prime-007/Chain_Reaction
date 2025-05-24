@@ -1,0 +1,13 @@
+# PyTorch (CPU or GPU version should be chosen by the user when installing)
+torch
+# For TensorBoard logging (often comes with PyTorch, but good to list)
+tensorboard
+# Numerical operations
+numpy
+# FastAPI framework
+fastapi
+# ASGI server for FastAPI
+uvicorn[standard] 
+# Data validation
+pydantic
+```
