@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Make sure models and bot are imported with relative paths
 from ai.models import GameState, Position
-from ai.bot import get_random_ai_move
+from ai.bot import get_ai_player_move # Changed from get_random_ai_move
 
 app = FastAPI()
 
@@ -45,7 +45,7 @@ async def get_ai_move_endpoint(game_state: GameState) -> Position:
     # if not ai_player.isAI:
     #     raise HTTPException(status_code=400, detail="Current player is not an AI.")
 
-    move = get_random_ai_move(game_state)
+    move = get_ai_player_move(game_state) # Changed from get_random_ai_move
 
     if move is None:
         # This might happen if no valid moves are available,
