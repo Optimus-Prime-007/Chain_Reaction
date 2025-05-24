@@ -1,45 +1,96 @@
-from typing import Any, Dict
-from ai.models import GameState, Position, GridSizeConfig # Assuming these are in ai.models
+import torch
+from typing import Optional # Required for Optional[PlayerId]
 
-# Example: Maximum number of possible moves if policy is a flat vector.
-# This needs to be defined based on game rules, e.g., rows * cols for a grid game.
-# Or, if policy is a dict, this might not be strictly needed here.
-# Let's assume for now the NN expects a flat policy vector for all possible cell selections.
-# MAX_POLICY_INDEX = 7 * 6 # Example for a 7x6 grid, to be configured properly.
+# Assuming models.py is in the parent directory 'ai'
+# Adjust based on actual execution environment if this relative import fails
+try:
+    from ..models import GameState, PlayerId, CellState, Position # Added Position
+except ImportError:
+    # Fallback for environments where the relative import might not work as expected
+    from ai.models import GameState, PlayerId, CellState, Position # Added Position
 
-def encode_state(state: GameState) -> Any:
-    """
-    Encodes the game state into a format suitable for the neural network input.
-    The actual representation (e.g., numpy array) depends on the NN architecture.
-    To be implemented.
-    """
-    print(f"DEBUG: utils.encode_state called for state turn {state.turnNumber}")
-    # Placeholder: return a simple representation or raise NotImplementedError
-    # For now, returning a dict to simulate some encoding.
-    # This needs to be a tensor (e.g., numpy array) for the actual NN.
-    return {
-        "grid": [[(c.player, c.orbs) for c in row] for row in state.grid],
-        "currentPlayerId": state.currentPlayerId,
-        "turn": state.turnNumber
-    } # Must be implemented to return a format the NN expects (e.g., np.ndarray)
 
-def get_move_to_policy_idx_map(grid_size: GridSizeConfig) -> Dict[Position, int]:
-    """
-    Creates a mapping from a game Position (row, col) to a unique integer index
-    in the neural network's policy output vector.
-    This is crucial for interpreting the NN's policy logits.
-    Assumes a flat policy vector where each cell on the grid corresponds to an index.
-    To be implemented based on how moves are represented in the policy vector.
-    """
-    print(f"DEBUG: utils.get_move_to_policy_idx_map called for grid size {grid_size.rows}x{grid_size.cols}")
-    mapping = {}
-    idx = 0
-    for r in range(grid_size.rows):
-        for c in range(grid_size.cols):
-            mapping[Position(row=r, col=c)] = idx
-            idx += 1
-    return mapping # Must be implemented correctly based on NN policy head design
+def encode_state(game_state: GameState, player_id: PlayerId) -> torch.Tensor:
+  """
+  Encodes the current game state into a PyTorch tensor from the perspective
+  of the given player_id.
 
-# Potentially, an inverse mapping might also be useful:
-# def get_policy_idx_to_move_map(grid_size: GridSizeConfig) -> Dict[int, Position]:
-#    pass
+  The tensor has 5 channels:
+  - Channel 0: Own orbs (normalized by 4.0).
+  - Channel 1: Opponent orbs (normalized by 4.0).
+  - Channel 2: Own player cells (binary).
+  - Channel 3: Opponent player cells (binary).
+  - Channel 4: Current turn plane (binary: 1.0 if current player's turn).
+
+  Args:
+    game_state: The current state of the game.
+    player_id: The ID of the player for whom the state is being encoded.
+
+  Returns:
+    A PyTorch tensor of shape (5, rows, cols) representing the encoded state.
+
+  Raises:
+    ValueError: If the game is not a 2-player game or if player_id is not found.
+  """
+  if len(game_state.players) != 2:
+    raise ValueError("State encoding currently assumes a 2-player game.")
+
+  opponent_id: Optional[PlayerId] = None
+  if game_state.players[0].id == player_id:
+    opponent_id = game_state.players[1].id
+  elif game_state.players[1].id == player_id:
+    opponent_id = game_state.players[0].id
+  else:
+    # This case should ideally not be reached if player_id is validated before calling
+    raise ValueError(f"Player ID {player_id} not found in game_state.players list.")
+
+  rows = game_state.gridConfiguration.rows
+  cols = game_state.gridConfiguration.cols
+  
+  # Initialize tensor: C=5 channels (own_orbs, opp_orbs, own_cells, opp_cells, turn_plane)
+  encoded_tensor = torch.zeros((5, rows, cols), dtype=torch.float32)
+
+  for r in range(rows):
+    for c in range(cols):
+      cell = game_state.grid[r][c]
+      cell_owner = cell.player
+      orbs = cell.orbs
+
+      if cell_owner == player_id:
+        encoded_tensor[0, r, c] = orbs / 4.0  # Own orbs
+        encoded_tensor[2, r, c] = 1.0       # Own player cells
+      elif cell_owner == opponent_id:
+        encoded_tensor[1, r, c] = orbs / 4.0  # Opponent orbs
+        encoded_tensor[3, r, c] = 1.0       # Opponent player cells
+      # If cell_owner is None, orbs are implicitly 0 for channels 0 & 1,
+      # and cells are 0 for channels 2 & 3 due to torch.zeros initialization.
+
+  # Channel 4: Current Turn Plane
+  if game_state.currentPlayerId == player_id:
+    encoded_tensor[4, :, :] = 1.0
+
+  return encoded_tensor
+
+def convert_move_index_to_position(move_index: int, num_cols: int) -> Position:
+  """
+  Converts a flat move index into a Position object (row, col).
+
+  Args:
+    move_index: The flat index of the move in a row-major ordered grid.
+                (e.g., 0 for (0,0), 1 for (0,1), ..., num_cols for (1,0)).
+    num_cols: The number of columns in the grid.
+
+  Returns:
+    A Position object with the calculated row and column.
+  
+  Raises:
+    ValueError: If move_index is negative or num_cols is not positive.
+  """
+  if move_index < 0:
+    raise ValueError("move_index cannot be negative.")
+  if num_cols <= 0:
+    raise ValueError("num_cols must be a positive integer.")
+    
+  row = move_index // num_cols
+  col = move_index % num_cols
+  return Position(row=row, col=col)

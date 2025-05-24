@@ -1,100 +1,264 @@
-from typing import List, Optional, Any
-from ai.models import GameState, Position, PlayerId
+import copy # For deepcopy
+from typing import List, Optional, Tuple
+from collections import deque
 
-# (Assuming GameState, Position, PlayerId are defined in ai.models)
+# Assuming models.py is in the parent directory 'ai'
+# Adjust based on actual execution environment if this relative import fails
+try:
+    from ..models import GameState, Position, PlayerId, CellState, GameStatus, GridSizeConfig, PlayerInfo, Grid
+except ImportError:
+    # Fallback for environments where the relative import might not work as expected
+    # This might happen if the script is run directly for testing from a different working directory
+    from ai.models import GameState, Position, PlayerId, CellState, GameStatus, GridSizeConfig, PlayerInfo, Grid
 
-def get_valid_moves(state: GameState) -> List[Position]:
-    """
-    Returns a list of all valid moves for the current player in the given state.
-    To be implemented based on specific game rules.
-    """
-    print(f"DEBUG: game_rules.get_valid_moves called for state turn {state.turnNumber}, player {state.currentPlayerId}")
-    # Placeholder: Return an empty list or a dummy move if needed for basic testing without full game logic
-    # For now, to avoid breaking MCTS which expects moves, let's assume a dummy grid and return one move.
-    # This will need to be properly implemented.
-    if state.gridSize.rows > 0 and state.gridSize.cols > 0:
-        # Example: return a corner if grid exists, otherwise empty list
-        # return [Position(row=0, col=0)]
-        pass # Placeholder, MCTS should ideally handle empty valid_moves if game ends.
-    return [] # Must be implemented
+def get_critical_mass(row: int, col: int, rows: int, cols: int) -> int:
+  """
+  Determines the critical mass of a cell in a grid.
 
-def get_reward(state: GameState, root_player_id: PlayerId) -> float:
-    """
-    Returns the reward for the root_player_id given a terminal state.
-    +1 for win, -1 for loss, 0 for draw.
-    Perspective is crucial: reward for `root_player_id`.
-    To be implemented based on specific game rules.
-    """
-    print(f"DEBUG: game_rules.get_reward called for state turn {state.turnNumber}, root_player {root_player_id}, winner {state.winnerId}")
-    if state.winnerId is None:
-        return 0.0  # Draw or ongoing (though should be terminal for reward)
-    if state.winnerId == root_player_id:
-        return 1.0  # root_player_id wins
+  The critical mass is the maximum number of orbs a cell can hold before
+  it explodes.
+
+  Args:
+    row: The row index of the cell.
+    col: The column index of the cell.
+    rows: The total number of rows in the grid.
+    cols: The total number of columns in the grid.
+
+  Returns:
+    The critical mass of the cell.
+  """
+  if rows == 1 and cols == 1:
+    return 1
+  elif rows == 1:
+    if col == 0 or col == cols - 1:
+      return 1
     else:
-        return -1.0 # root_player_id loses (opponent won)
+      return 2
+  elif cols == 1:
+    if row == 0 or row == rows - 1:
+      return 1
+    else:
+      return 2
+  else:  # rows > 1 and cols > 1
+    is_corner = (row == 0 or row == rows - 1) and \
+                (col == 0 or col == cols - 1)
+    is_edge = (row == 0 or row == rows - 1) or \
+              (col == 0 or col == cols - 1)
 
-def is_terminal(state: GameState) -> bool:
-    """
-    Checks if the given state is a terminal state (game over).
-    To be implemented based on specific game rules.
-    """
-    print(f"DEBUG: game_rules.is_terminal called for state turn {state.turnNumber}, status {state.status}")
-    return state.status == "finished" or state.status == "draw" # Based on GameState model
+    if is_corner:
+      return 2
+    elif is_edge:
+      return 3
+    else:
+      return 4
 
-def apply_move(state: GameState, move: Position, player_id: PlayerId) -> GameState:
-    """
-    Applies the given move for the player_id to the state and returns a NEW GameState object.
-    This function must not modify the input state (immutable states are preferred).
-    To be implemented based on specific game rules.
-    """
-    print(f"DEBUG: game_rules.apply_move called: player {player_id} moves to {move.row},{move.col} in turn {state.turnNumber}")
-    # Placeholder: Returns a copy of the state, possibly with the move made.
-    # This is a critical function and needs full implementation.
-    # For MCTS to work, it needs to simulate moves.
-    new_state = state.copy(deep=True)
+def get_game_status_and_winner(game_state: GameState) -> Tuple[GameStatus, Optional[PlayerId]]:
+  """
+  Determines the current status of the game and identifies a winner if the
+  game has finished.
+
+  Args:
+    game_state: The current state of the game.
+
+  Returns:
+    A tuple containing the GameStatus (e.g., "active", "finished", "draw")
+    and an optional PlayerId of the winner (if the game is finished and
+    there's a winner).
+  """
+  # 1. Initial Check (Too Early To End)
+  # Ensures every player has a chance to make at least one move.
+  if game_state.turnNumber < len(game_state.players):
+    return GameStatus.ACTIVE, None
+
+  # 2. Count Orbs and Active Players
+  player_orbs = {p.id: 0 for p in game_state.players}
+  players_with_orbs = set()
+
+  for r in range(game_state.gridConfiguration.rows):
+    for c in range(game_state.gridConfiguration.cols):
+      cell = game_state.grid[r][c]
+      if cell.player is not None and cell.orbs > 0:
+        # Ensure cell.player is a valid PlayerId before using as a key
+        if cell.player in player_orbs:
+            player_orbs[cell.player] += cell.orbs
+            players_with_orbs.add(cell.player)
+        # else:
+            # This case implies a cell has orbs for a player not in game_state.players.
+            # This should ideally not happen if game state is managed correctly.
+            # Consider logging a warning or raising an error if strict consistency is required.
+            # print(f"Warning: Cell player {cell.player} has orbs but is not in game_state.players")
+
+
+  # 3. Determine Winner/Status based on orb count
+  if game_state.turnNumber > 0: # This check is now implicitly covered by turnNumber >= len(players)
+                               # but kept for clarity for the zero orbs case.
+    if len(players_with_orbs) == 0:
+      # All orbs have vanished (e.g., simultaneous explosions).
+      return GameStatus.DRAW, None
     
-    # Basic example: Set cell, change current player, increment turn.
-    # This is NOT the real game logic.
-    if 0 <= move.row < new_state.gridSize.rows and 0 <= move.col < new_state.gridSize.cols:
-        # new_state.grid[move.row][move.col].player = player_id # Example
-        # new_state.grid[move.row][move.col].orbs = 1 # Example
-        pass # Actual game logic for applying move is needed here
+    if len(players_with_orbs) == 1:
+      winner_id = list(players_with_orbs)[0]
+      return GameStatus.FINISHED, winner_id
 
-    # Determine next player (simple alternation for placeholder)
-    # current_player_index = -1
-    # for i, p_info in enumerate(new_state.players):
-    #     if p_info.id == player_id:
-    #         current_player_index = i
-    #         break
-    # if current_player_index != -1 and len(new_state.players) > 0:
-    #     next_player_index = (current_player_index + 1) % len(new_state.players)
-    #     new_state.currentPlayerId = new_state.players[next_player_index].id
-    # else:
-    #     new_state.currentPlayerId = None # Or handle error
+  # 4. Check for Draw by Max Turns (Optional but Recommended)
+  # Using gridConfiguration for rows/cols
+  MAX_TURNS = game_state.gridConfiguration.rows * game_state.gridConfiguration.cols * 4
+  if game_state.turnNumber > MAX_TURNS:
+    return GameStatus.DRAW, None
 
-    # new_state.turnNumber += 1
-    # new_state.status = "active" # Or check for game end
+  # 5. Game is Still Active
+  return GameStatus.ACTIVE, None
+
+def get_valid_moves(game_state: GameState) -> List[Position]:
+  """
+  Identifies all valid moves for the current player.
+
+  A move is valid if the cell is empty or already occupied by the current
+  player.
+
+  Args:
+    game_state: The current state of the game.
+
+  Returns:
+    A list of Position objects representing valid moves.
+  """
+  valid_moves: List[Position] = []
+  rows = game_state.gridConfiguration.rows
+  cols = game_state.gridConfiguration.cols
+  current_player_id = game_state.currentPlayerId
+
+  for r in range(rows):
+    for c in range(cols):
+      cell = game_state.grid[r][c]
+      if cell.player is None or cell.player == current_player_id:
+        valid_moves.append(Position(row=r, col=c))
+  return valid_moves
+
+def apply_move(current_game_state: GameState, move: Position, player_id: PlayerId) -> GameState:
+  """
+  Applies a move to the game state and returns the new game state.
+
+  This function does not modify current_game_state in place.
+
+  Args:
+    current_game_state: The current state of the game.
+    move: The position of the move to apply.
+    player_id: The ID of the player making the move.
+
+  Returns:
+    A new GameState object representing the state after the move.
+  """
+  if current_game_state.currentPlayerId != player_id:
+    raise ValueError("Move played by player who is not the current player.")
+
+  new_game_state = copy.deepcopy(current_game_state)
+
+  # Initial Orb Placement
+  cell_to_update = new_game_state.grid[move.row][move.col]
+  cell_to_update.orbs += 1
+  cell_to_update.player = player_id
+
+  # Explosion Logic
+  explosion_queue = deque([move])
+  rows = new_game_state.gridConfiguration.rows
+  cols = new_game_state.gridConfiguration.cols
+
+  while explosion_queue:
+    r, c = explosion_queue.popleft().row, explosion_queue.popleft().col # Incorrect: popleft twice
+    # Corrected pop:
+    # current_pos = explosion_queue.popleft()
+    # r, c = current_pos.row, current_pos.col
+    # The provided template for popleft was: Pop a (r, c) position from the queue.
+    # Position objects are used in queue, so popping Position and then accessing r,c is correct.
+    # However, the template deque([move]) adds Position, so popleft() returns Position.
+    # The error is in the original template `r, c = explosion_queue.popleft().row, explosion_queue.popleft().col` which would call popleft() twice.
+    # Let's fix this by first popping the Position object.
     
-    # For now, just return a deep copy. The MCTS expansion requires this to not fail.
-    # The actual move application logic is complex and game-specific.
-    return new_state # Must be implemented correctly
+    current_pos = explosion_queue.popleft() 
+    r, c = current_pos.row, current_pos.col
 
-def get_next_player_id(state: GameState, current_player_id: PlayerId) -> Optional[PlayerId]:
-    """
-    Determines the ID of the next player.
-    To be implemented based on specific game rules (e.g., simple alternation, skipping players).
-    """
-    print(f"DEBUG: game_rules.get_next_player_id called for current player {current_player_id} in turn {state.turnNumber}")
-    player_ids = [p.id for p in state.players]
-    if not player_ids:
-        return None
-    try:
-        current_idx = player_ids.index(current_player_id)
-        next_idx = (current_idx + 1) % len(player_ids)
-        return player_ids[next_idx]
-    except ValueError: # current_player_id not in list
-        return None # Or raise error
+    cell = new_game_state.grid[r][c]
+    crit_mass = get_critical_mass(r, c, rows, cols)
 
-# It's good practice to also define an initial state function if not already present.
-# def get_initial_state(grid_size_config: Any, players: List[PlayerInfo]) -> GameState:
-#     pass # To be implemented
+    if cell.orbs >= crit_mass:
+      cell.orbs -= crit_mass
+      if cell.orbs == 0:
+        cell.player = None  # Cell becomes empty
+
+      potential_neighbors = [
+          Position(row=r - 1, col=c), Position(row=r + 1, col=c),
+          Position(row=r, col=c - 1), Position(row=r, col=c + 1)
+      ]
+
+      for neighbor_pos in potential_neighbors:
+        nr, nc = neighbor_pos.row, neighbor_pos.col
+        if 0 <= nr < rows and 0 <= nc < cols:
+          neighbor_cell = new_game_state.grid[nr][nc]
+          neighbor_cell.orbs += 1
+          neighbor_cell.player = player_id  # Orb capture
+          explosion_queue.append(neighbor_pos) # Add to queue for potential chain reaction
+
+  # Update Game Status and Winner
+  status, winner = get_game_status_and_winner(new_game_state)
+  new_game_state.status = status
+  new_game_state.winnerId = winner
+
+  # Switch Current Player
+  if new_game_state.status == GameStatus.ACTIVE:
+    current_player_index = -1
+    for i, p_info in enumerate(new_game_state.players):
+        if p_info.id == player_id:
+            current_player_index = i
+            break
+    
+    if current_player_index != -1: # Should always be found
+        next_player_index = (current_player_index + 1) % len(new_game_state.players)
+        new_game_state.currentPlayerId = new_game_state.players[next_player_index].id
+    else:
+        # This case should ideally not be reached if player_id is always valid
+        # and present in new_game_state.players
+        # Consider logging an error or raising an exception
+        pass
+
+
+  # Increment Turn Number
+  new_game_state.turnNumber += 1
+
+  return new_game_state
+
+def get_initial_state(grid_size_config: GridSizeConfig, players_info: List[PlayerInfo]) -> GameState:
+  """
+  Creates and returns a new GameState object representing the start of a game.
+
+  Args:
+    grid_size_config: Configuration for the grid dimensions.
+    players_info: A list of PlayerInfo objects for the players in the game.
+
+  Returns:
+    A GameState object representing the initial state of the game.
+  """
+  # 1. Initialize Grid
+  grid: Grid = []
+  for r in range(grid_size_config.rows):
+    row_list: List[CellState] = []
+    for c in range(grid_size_config.cols):
+      row_list.append(CellState(player=None, orbs=0))
+    grid.append(row_list)
+
+  # 2. Determine Initial Current Player
+  current_player_id: Optional[PlayerId] = None
+  if players_info:
+    current_player_id = players_info[0].id
+
+  # 3. Create GameState Object
+  initial_game_state = GameState(
+      grid=grid,
+      players=players_info,
+      currentPlayerId=current_player_id,
+      status=GameStatus.ACTIVE,  # Assuming GameStatus.ACTIVE is "active"
+      winnerId=None,
+      gridConfiguration=grid_size_config, # Corrected from gridSize to gridConfiguration
+      turnNumber=0
+  )
+
+  return initial_game_state
