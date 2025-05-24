@@ -7,7 +7,6 @@ numpy
 # FastAPI framework
 fastapi
 # ASGI server for FastAPI
-uvicorn[standard] 
+uvicorn[standard]
 # Data validation
 pydantic
-```
