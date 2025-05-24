@@ -2,7 +2,7 @@ import random
 from typing import List, Optional
 
 # Make sure models are imported from .models
-from .models import GameState, Position, PlayerId, CellState
+from ai.models import GameState, Position, PlayerId, CellState
 
 def get_random_ai_move(game_state: GameState) -> Optional[Position]:
     """

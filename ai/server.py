@@ -2,8 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # Make sure models and bot are imported with relative paths
-from .models import GameState, Position
-from .bot import get_random_ai_move
+from ai.models import GameState, Position
+from ai.bot import get_random_ai_move
 
 app = FastAPI()
 
