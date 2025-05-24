@@ -21,6 +21,7 @@ class PlayerInfo(BaseModel):
     orbColorClass: str # Tailwind class for individual orbs if visualized
     primaryHex: str # Hex color string for custom elements like cursors
     isAI: Optional[bool] = False # Added to identify AI players
+    ai_type: Optional[str] = "random"  # Specifies AI behavior: "random", "alphazero", etc.
 
 # Using Literal for GameStatus as it's a string enum in TypeScript
 GameStatus = Literal["setup", "active", "finished", "draw"]
