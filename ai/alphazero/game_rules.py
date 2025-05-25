@@ -164,17 +164,7 @@ def apply_move(current_game_state: GameState, move: Position, player_id: PlayerI
   cols = new_game_state.gridConfiguration.cols
 
   while explosion_queue:
-    r, c = explosion_queue.popleft().row, explosion_queue.popleft().col # Incorrect: popleft twice
-    # Corrected pop:
-    # current_pos = explosion_queue.popleft()
-    # r, c = current_pos.row, current_pos.col
-    # The provided template for popleft was: Pop a (r, c) position from the queue.
-    # Position objects are used in queue, so popping Position and then accessing r,c is correct.
-    # However, the template deque([move]) adds Position, so popleft() returns Position.
-    # The error is in the original template `r, c = explosion_queue.popleft().row, explosion_queue.popleft().col` which would call popleft() twice.
-    # Let's fix this by first popping the Position object.
-    
-    current_pos = explosion_queue.popleft() 
+    current_pos = explosion_queue.popleft()
     r, c = current_pos.row, current_pos.col
 
     cell = new_game_state.grid[r][c]
