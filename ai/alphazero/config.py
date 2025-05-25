@@ -1,12 +1,7 @@
 from typing import List, Any, Optional # Ensured Optional is imported
 
 # Assuming models are in ai.models or accessible via the parent directory
-try:
-    from ..models import GridSizeConfig, PlayerInfo
-except ImportError:
-    # Fallback for environments where the relative import might not work as expected
-    # This might happen if the script is run directly for testing
-    from ai.models import GridSizeConfig, PlayerInfo
+from ai.models import GridSizeConfig, PlayerInfo
 
 # MCTS and Self-Play Configuration Parameters
 MCTS_SIMULATIONS: int = 100  # Number of MCTS simulations per move
@@ -43,7 +38,7 @@ VALUE_LOSS_WEIGHT: float = 1.0  # Weight for the value loss component in total l
 # CHECKPOINT_SAVE_PATH_FORMAT is used by the main_training_loop to save iteration checkpoints
 CHECKPOINT_SAVE_PATH_FORMAT: str = "ai/trained_models/checkpoints/alphazero_iter_{iteration}.pth" # Updated path
 # Set to a specific path like "ai/trained_models/checkpoints/alphazero_iter_X.pth" to resume training
-LOAD_CHECKPOINT_PATH: Optional[str] = None 
+LOAD_CHECKPOINT_PATH: Optional[str] = None
 BEST_MODEL_PATH: str = "ai/trained_models/best_model.pth"  # Path to the chosen production model (updated path)
 CHECKPOINT_DIR: str = "ai/trained_models/checkpoints" # Directory for periodic checkpoints
 SAVE_CHECKPOINT_EVERY_N_ITERATIONS: int = 10 # Save a checkpoint every N training iterations

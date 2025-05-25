@@ -7,9 +7,10 @@ import shutil # For shutil.copy
 # AlphaZero specific imports
 # Adjust path if necessary, assuming ai.models is accessible
 try:
-    from ..models import GameState, Position, PlayerId, GridSizeConfig, PlayerInfo
-except ImportError: # Fallback for direct execution or different structure
     from ai.models import GameState, Position, PlayerId, GridSizeConfig, PlayerInfo
+except ImportError:
+    # Fallback: try relative import if running as a module
+    from .models import GameState, Position, PlayerId, GridSizeConfig, PlayerInfo
 
 from . import game_rules as game_rules_module # Import as module to avoid name clashes
 from .neural_net import AlphaZeroNet
@@ -36,7 +37,7 @@ class RandomAgent(BaseAgent):
             # This should ideally not happen if game ends correctly
             # print(f"WARNING: RandomAgent {self.player_id} has no valid moves!") # Use logger in Arena
             # Fallback: pick first cell if grid not full (not a great fallback but avoids crash)
-            return Position(row=0, col=0) 
+            return Position(row=0, col=0)
         return random.choice(valid_moves)
 
     def get_name(self) -> str:
