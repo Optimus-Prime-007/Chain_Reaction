@@ -145,3 +145,4 @@ dist
 
 __pycache__/
 cr/
+.vscode/
